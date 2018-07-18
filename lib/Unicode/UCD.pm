@@ -1,5 +1,4 @@
 package Unicode::UCD;
-            use Data::Dumper;
 
 use strict;
 use warnings;
@@ -3258,7 +3257,6 @@ RETRY:
     # the property name, and 32 means we will accept 32 bit return values.
     # The 0 means we aren't calling this from tr///.
     my $swash = utf8::SWASHNEW(__PACKAGE__, "To$prop", undef, 32, 0);
-            #print STDERR __LINE__, ": ", Dumper $swash;
 
     # If didn't find it, could be because needs a proxy.  And if was the
     # 'Block' or 'Name' property, use a proxy even if did find it.  Finding it
@@ -3445,11 +3443,6 @@ RETRY:
                                         : "<hangul syllable>";
                 }
 
-                # This happens only in dm:  Split a multi-code-point range if
-                # each maps to the same multi-code-point decomposition.  This
-                # is because the ultimate output format will be 'a'djusted,
-                # and the only ranges in that format have adjacent code points
-                # mapping to adjacent code points
                 if ($value =~ / / && $hex_upper ne "" && $hex_upper ne $hex_lower) {
                     $line = sprintf("%04X\t%s\t%s", hex($hex_lower) + 1, $hex_upper, $value);
                     $hex_upper = "";
@@ -3462,7 +3455,6 @@ RETRY:
                 redo if $redo;
             }
             $swash = \%decomps;
-            #print STDERR __LINE__, ": ", Dumper $swash;
         }
         elsif ($second_try ne 'nfkccf') { # Don't know this property. Fail.
             return;
@@ -3529,7 +3521,7 @@ RETRY:
 
                     # So just convert these to single-element ranges
                     foreach my $code_point ($begin .. $end) {
-                        $list .= sprintf("%04X\t\t%x\n",
+                        $list .= sprintf("%04X\t\t%d\n",
                                         $code_point, $decimal_map);
                     }
                 }
@@ -3588,12 +3580,12 @@ RETRY:
                         # be combined, and the range is single-element, or we
                         # wouldn't be combining.  Get it's code point.
                         my ($hex_end, undef, undef) = split "\t", $ranges[$i];
-                        $list .= "$hex_begin\t$hex_end\t$map\n";
+                        $list .= "$hex_begin\t$hex_end\t$decimal_map\n";
                     } else {
 
                         # Here, no combining done.  Just append the initial
                         # (and current) values.
-                        $list .= "$hex_begin\t\t$map\n";
+                        $list .= "$hex_begin\t\t$decimal_map\n";
                     }
                 }
             } # End of loop constructing the converted list
@@ -3606,10 +3598,9 @@ RETRY:
             $swash = \%revised_swash;
 
             $utf8::SwashInfo{$type}{'missing'} = 0;
-            $utf8::SwashInfo{$type}{'format'} = 'ax';
+            $utf8::SwashInfo{$type}{'format'} = 'a';
         }
     }
-            #print STDERR __LINE__, ": ", Dumper $swash;
 
     if ($swash->{'EXTRAS'}) {
         carp __PACKAGE__, "::prop_invmap: swash returned for $prop unexpectedly has EXTRAS magic";
@@ -3794,7 +3785,7 @@ RETRY:
                 else {
                     my @map = split " ", $map;
                     if (@map == 1) {
-                        push @invmap, hex $map[0];
+                        push @invmap, $map[0];
                     }
                     else {
                         push @invmap, \@map;
@@ -4009,12 +4000,7 @@ RETRY:
 	croak __PACKAGE__, "::prop_invmap: Wrong format '$format' for prop_invmap('$prop'); should indicate has lists";
     }
 
-    return (\@invlist,
-            \@invmap,
-            (($internal_ok)
-             ? $utf8::SwashInfo{$returned_prop}{'format'}
-             : $format),
-            $missing);
+    return (\@invlist, \@invmap, $format, $missing);
 }
 
 sub search_invlist {
