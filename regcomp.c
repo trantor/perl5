@@ -7665,11 +7665,11 @@ Perl_re_op_compile(pTHX_ SV ** const patternp, int pat_count,
 	 * properly currently.
 	 *
 	 */
-	while ((OP(first) == OPEN && (sawopen = 1)) ||
+	while ((OP(first) == OPEN && (sawopen == 1)) ||
 	       /* An OR of *one* alternative - should not happen now. */
 	    (OP(first) == BRANCH && OP(first_next) != BRANCH) ||
 	    /* for now we can't handle lookbehind IFMATCH*/
-	    (OP(first) == IFMATCH && !first->flags && (sawlookahead = 1)) ||
+	    (OP(first) == IFMATCH && !first->flags && (sawlookahead == 1)) ||
 	    (OP(first) == PLUS) ||
 	    (OP(first) == MINMOD) ||
 	       /* An {n,m} with n>0 */
