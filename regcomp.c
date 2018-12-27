@@ -14328,18 +14328,16 @@ S_regatom(pTHX_ RExC_state_t *pRExC_state, I32 *flagp, U32 depth)
                             has_micro_sign = TRUE;
                         }
 
-                        *(s++) = (char) (DEPENDS_SEMANTICS)
-                                        ? toFOLD(ender)
+                        *(s++) = (DEPENDS_SEMANTICS)
+                                 ? (char) toFOLD(ender)
 
-                                          /* Under /u, the fold of any
-                                           * character in the 0-255 range
-                                           * happens to be its lowercase
-                                           * equivalent, except for LATIN SMALL
-                                           * LETTER SHARP S, which was handled
-                                           * above, and the MICRO SIGN, whose
-                                           * fold requires UTF-8 to represent.
-                                           * */
-                                        : toLOWER_L1(ender);
+                                   /* Under /u, the fold of any character in
+                                    * the 0-255 range happens to be its
+                                    * lowercase equivalent, except for LATIN
+                                    * SMALL LETTER SHARP S, which was handled
+                                    * above, and the MICRO SIGN, whose fold
+                                    * requires UTF-8 to represent.  */
+                                  : (char) toLOWER_L1(ender);
                     }
 		} /* End of adding current character to the node */
 
