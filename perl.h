@@ -62,7 +62,9 @@
 #  endif
 #endif
 
+#ifndef PERL_IMPLICIT_SYS
 #    define PERL_GLOBAL_STRUCT
+#endif
 
 #ifdef PERL_GLOBAL_STRUCT_PRIVATE
 #  ifndef PERL_GLOBAL_STRUCT
