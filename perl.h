@@ -6201,6 +6201,7 @@ typedef struct am_table_short AMTS;
 #    define LC_NUMERIC_LOCK(cond_to_panic_if_already_locked)                \
         CLANG_DIAG_IGNORE(-Wthread-safety)	     	                    \
         STMT_START {                                                        \
+            dVAR;                                                           \
             if (PL_lc_numeric_mutex_depth <= 0) {                           \
                 MUTEX_LOCK(&PL_lc_numeric_mutex);                           \
                 PL_lc_numeric_mutex_depth = 1;                              \
@@ -6223,6 +6224,7 @@ typedef struct am_table_short AMTS;
 
 #    define LC_NUMERIC_UNLOCK                                               \
         STMT_START {                                                        \
+            dVAR;                                                           \
             if (PL_lc_numeric_mutex_depth <= 1) {                           \
                 MUTEX_UNLOCK(&PL_lc_numeric_mutex);                         \
                 PL_lc_numeric_mutex_depth = 0;                              \
@@ -6382,6 +6384,7 @@ expression, but with an empty argument list, like this:
 
 #  define STORE_LC_NUMERIC_SET_TO_NEEDED()                                  \
         STMT_START {                                                        \
+            dVAR;                                                           \
             LC_NUMERIC_LOCK(                                                \
                           (IN_LC(LC_NUMERIC) && _NOT_IN_NUMERIC_UNDERLYING) \
                       || _NOT_IN_NUMERIC_STANDARD);                         \
@@ -6403,6 +6406,7 @@ expression, but with an empty argument list, like this:
 
 #  define RESTORE_LC_NUMERIC()                                              \
         STMT_START {                                                        \
+            dVAR;                                                           \
             if (_restore_LC_NUMERIC_function) {                             \
                 _restore_LC_NUMERIC_function(aTHX);                         \
             }                                                               \
@@ -6413,6 +6417,7 @@ expression, but with an empty argument list, like this:
  * only after being sure that this is what is needed */
 #  define SET_NUMERIC_STANDARD()                                            \
 	STMT_START {                                                        \
+            dVAR;                                                           \
             DEBUG_Lv(PerlIO_printf(Perl_debug_log,                          \
                                "%s: %d: lc_numeric standard=%d\n",          \
                                 __FILE__, __LINE__, PL_numeric_standard));  \
@@ -6424,6 +6429,7 @@ expression, but with an empty argument list, like this:
 
 #  define SET_NUMERIC_UNDERLYING()                                          \
 	STMT_START {                                                        \
+            dVAR;                                                           \
             if (_NOT_IN_NUMERIC_UNDERLYING) {                               \
                 Perl_set_numeric_underlying(aTHX);                          \
             }                                                               \
@@ -6433,6 +6439,7 @@ expression, but with an empty argument list, like this:
  * the RESTORE_foo ones called to switch back, but only if need be */
 #  define STORE_LC_NUMERIC_SET_STANDARD()                                   \
         STMT_START {                                                        \
+            dVAR;                                                           \
             LC_NUMERIC_LOCK(_NOT_IN_NUMERIC_STANDARD);                      \
             if (_NOT_IN_NUMERIC_STANDARD) {                                 \
                 _restore_LC_NUMERIC_function = &Perl_set_numeric_underlying;\
@@ -6444,6 +6451,7 @@ expression, but with an empty argument list, like this:
  * locale'.  This is principally in the POSIX:: functions */
 #  define STORE_LC_NUMERIC_FORCE_TO_UNDERLYING()                            \
 	STMT_START {                                                        \
+            dVAR;                                                           \
             LC_NUMERIC_LOCK(_NOT_IN_NUMERIC_UNDERLYING);                    \
             if (_NOT_IN_NUMERIC_UNDERLYING) {                               \
                 Perl_set_numeric_underlying(aTHX);                          \
@@ -6455,6 +6463,7 @@ expression, but with an empty argument list, like this:
  * recursively callable.  [perl #128207] */
 #  define LOCK_LC_NUMERIC_STANDARD()                                        \
         STMT_START {                                                        \
+            dVAR;                                                           \
             DEBUG_Lv(PerlIO_printf(Perl_debug_log,                          \
                       "%s: %d: lock lc_numeric_standard: new depth=%d\n",   \
                       __FILE__, __LINE__, PL_numeric_standard + 1));        \
@@ -6464,6 +6473,7 @@ expression, but with an empty argument list, like this:
 
 #  define UNLOCK_LC_NUMERIC_STANDARD()                                      \
         STMT_START {                                                        \
+            dVAR;                                                           \
             if (PL_numeric_standard > 1) {                                  \
                 PL_numeric_standard--;                                      \
             }                                                               \
