@@ -575,7 +575,7 @@ Perl_upg_version(pTHX_ SV *ver, bool qv)
 #ifdef SvVOK
     const MAGIC *mg;
 #endif
-#ifdef dVAR;
+#ifdef dVAR
     dVAR;
 #endif
 
