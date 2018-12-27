@@ -575,6 +575,9 @@ Perl_upg_version(pTHX_ SV *ver, bool qv)
 #ifdef SvVOK
     const MAGIC *mg;
 #endif
+#ifdef dVAR;
+    dVAR;
+#endif
 
 #if PERL_VERSION_LT(5,19,8) && defined(USE_ITHREADS)
     ENTER;

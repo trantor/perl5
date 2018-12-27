@@ -3089,6 +3089,8 @@ S_my_nl_langinfo(const int item, bool toggle)
 int
 Perl_init_i18nl10n(pTHX_ int printwarn)
 {
+    dVAR;
+
     /* printwarn is
      *
      *    0 if not to output warning when setup locale is bad
