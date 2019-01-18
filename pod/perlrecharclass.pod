@@ -784,7 +784,8 @@ For example,
 
 is valid and matches '0', '1', any alphabetic character, and the percent sign.
 
-Perl recognizes the following POSIX character classes:
+Perl recognizes the following POSIX character classes (with the
+ASCII-range characters they match in parentheses):
 
  alpha  Any alphabetical character ("[A-Za-z]").
  alnum  Any alphanumeric character ("[A-Za-z0-9]").
