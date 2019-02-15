@@ -404,7 +404,7 @@ struct regnode_ssc {
  *
  *  1)  The bitmap has a compiled-in very finite size.  So something else needs
  *      to be used to specify if a code point that is too large for the bitmap
- *      actually matches.  The mechanism currently is a swash or inversion
+ *      actually matches.  The mechanism currently is an inversion
  *      list.  ANYOF_ONLY_HAS_BITMAP, described above, being TRUE indicates
  *      there are no matches of too-large code points.  But if it is FALSE,
  *      then almost certainly there are matches too large for the bitmap.  (The
@@ -416,6 +416,7 @@ struct regnode_ssc {
  *      match.  This is a common occurrence when the class is complemented,
  *      like /[^ij]/.  Therefore a bit is reserved to indicate this,
  *      rather than having an expensive swash created,
+ *      XXX look for swash in the code
  *      ANYOF_MATCHES_ALL_ABOVE_BITMAP.
  *  3)  Under /d rules, it can happen that code points that are in the upper
  *      latin1 range (\x80-\xFF or their equivalents on EBCDIC platforms) match

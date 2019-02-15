@@ -642,6 +642,8 @@ PERLVARI(I, underlying_numeric_obj, locale_t, NULL)
 #endif /* !USE_LOCALE_NUMERIC */
 
 /* utf8 character class swashes */
+
+    /* XXX get rid of these */
 PERLVAR(I, seen_deprecated_macro, HV *)
 
 PERLVAR(I, last_swash_hv, HV *)

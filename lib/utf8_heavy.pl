@@ -35,6 +35,13 @@ sub _loose_name ($) {
     # out blanks, underscores and dashes.  The complication stems from the
     # grandfathered-in 'L_', which retains a single trailing underscore.
 
+# integer or float
+my $integer_or_float_re = qr/ ^ -? \d+ (:? \. \d+ )? $ /x;
+
+# Also includes rationals
+my $numeric_re = qr! $integer_or_float_re | ^ -? \d+ / \d+ $ !x;
+    return $_[0] if $_[0] =~ $numeric_re;
+
     (my $loose = $_[0]) =~ s/[-_ \t]//g;
 
     return $loose if $loose !~ / ^ (?: is | to )? l $/x;
@@ -478,7 +485,7 @@ sub _loose_name ($) {
         # to separate them; also lists are already sorted, so don't need to do
         # that.
         if ($list && ! $list_is_from_mktables) {
-            my $taint = substr($list,0,0); # maintain taint
+            my $taint = substr($list,0,0); # maintain taint XXX
 
             # Separate the extras from the code point list, and make sure
             # user-defined properties and tr/// are well-behaved for

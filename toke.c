@@ -1525,6 +1525,7 @@ Perl_lex_read_unichar(pTHX_ U32 flags)
 	if (c == '\n')
 	    COPLINE_INC_WITH_HERELINES;
 	if (UTF)
+            /* XXX can this read past buffer end */
 	    PL_parser->bufptr += UTF8SKIP(PL_parser->bufptr);
 	else
 	    ++(PL_parser->bufptr);
@@ -3298,6 +3299,7 @@ S_scan_const(pTHX_ char *start)
                      * valid, so we can skip overwriting it */
                     if (has_utf8) {
                         SSize_t i;
+                        /* XXX can this read past buffer end */
                         d += UTF8SKIP(d);
                         for (i = range_min + 1; i <= range_max; i++) {
                             append_utf8_from_native_byte((U8) i, (U8 **) &d);
@@ -4014,6 +4016,7 @@ S_scan_const(pTHX_ char *start)
             utf8_variant_count++;
         }
         else if (this_utf8 && has_utf8) {   /* Both UTF-8, can just copy */
+            /* XXX can this read past buffer end */
 	    const STRLEN len = UTF8SKIP(s);
 
             /* We expect the source to have already been checked for
@@ -5225,6 +5228,7 @@ Perl_yylex(pTHX)
         SV *dsv = newSVpvs_flags("", SVs_TEMP);
         const char *c;
         if (UTF) {
+            /* XXX can this read past buffer end */
             STRLEN skiplen = UTF8SKIP(s);
             STRLEN stravail = PL_bufend - s;
             c = sv_uni_display(dsv, newSVpvn_flags(s,

@@ -1230,6 +1230,12 @@ Perl_malloc(size_t nbytes)
   	union overhead *p;
   	int bucket;
 
+        /*  */
+        if (nbytes > PTRDIFF_MAX) {
+            MYMALLOC_WRITE2STDERR("Too large a memory request");
+            return NULL;
+        }
+
 #if defined(DEBUGGING) || defined(RCHECK)
 	MEM_SIZE size = nbytes;
 #endif

@@ -6173,7 +6173,7 @@ PP(pp_split)
 
         if (do_utf8) {
             while (--limit) {
-                /* keep track of how many bytes we skip over */
+                /* keep track of how many bytes we skip over.  XXX check if skip is save here, check elsehwhere in this file */
                 m = s;
                 s += UTF8SKIP(s);
 		if (gimme_scalar) {

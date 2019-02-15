@@ -1,4 +1,6 @@
 #!perl -w
+use Data::Dumper;
+$Data::Dumper::Sortkeys = 1;
 use 5.015;
 use strict;
 use warnings;
@@ -9,6 +11,7 @@ use Unicode::UCD qw(prop_aliases
                     prop_invmap search_invlist
                     charprop
                     num
+                    charblock
                    );
 require './regen/regen_lib.pl';
 require './regen/charset_translations.pl';
@@ -32,7 +35,10 @@ my $VERSION_DATA_STRUCTURE_TYPE = 148565664;
 # for those maps that have a finite number of possible values
 
 # integer or float
-my $numeric_re = qr/ ^ -? \d+ (:? \. \d+ )? $ /x;
+my $integer_or_float_re = qr/ ^ -? \d+ (:? \. \d+ )? $ /x;
+
+# Also includes rationals
+my $numeric_re = qr! $integer_or_float_re | ^ -? \d+ / \d+ $ !x;
 
 # More than one code point may have the same code point as their fold.  This
 # gives the maximum number in the current Unicode release.  (The folded-to
@@ -164,7 +170,7 @@ sub a2n($) {
 
     # Returns the input Unicode code point translated to native.
 
-    return $cp if $cp !~ $numeric_re || $cp > 255;
+    return $cp if $cp !~ $integer_or_float_re || $cp > 255;
     return $a2n[$cp];
 }
 
@@ -2388,6 +2394,8 @@ foreach my $key (keys %utf8::nv_floating_to_rational) {
 # names first, finally alphabetically.  Also, sort together the tables we want
 # to be kept together, and prefer those with 'posix' in their names, which is
 # what the C code is expecting their names to be.
+my @equals_properties;
+my @prop_names_synonyms;
 foreach my $property (sort
         {   exists $keep_together{lc $b} <=> exists $keep_together{lc $a}
          or $b =~ /posix/i <=> $a =~ /posix/i
@@ -2413,7 +2421,8 @@ foreach my $property (sort
     my $inverted = $tag =~ s/!//;
 
     # This hash is lacking the property name
-    $property = "nv=$property" if $property =~ $float_e_format;
+    my $is_float = $property =~ $float_e_format;
+    $property = "nv=$property" if $is_float;
 
     # The list of 'prop=value' entries that this single entry expands to
     my @this_entries;
@@ -2422,8 +2431,16 @@ foreach my $property (sort
     # thing if there is no '='
     my ($lhs, $rhs) = $property =~ / ( [^=]* ) ( =? .*) /x;
 
-    # $lhs then becomes the property name.  See if there are any synonyms
-    # for this property.
+    # $lhs then becomes the property name.  
+    my $prop_value = $rhs =~ s/ ^ = //rx;
+
+    push @equals_properties, $lhs if $prop_value ne "";
+        #push @{$all_values{$lhs}}, $prop_value;
+        #print STDERR __LINE__, ": '$prop_value' from $property\n";
+        #push @{$all_values{$lhs}}, prop_value_aliases($lhs, $prop_value);
+    #}
+    
+    # See if there are any synonyms for this property.
     if (exists $prop_name_aliases{$lhs}) {
 
         # If so, do the combinatorics so that a new entry is added for
@@ -2442,6 +2459,16 @@ foreach my $property (sort
 
             my $new_entry = $alias . $rhs;
             push @this_entries, $new_entry;
+
+            push @prop_names_synonyms, "#define ${table_name_prefix}${alias}_index  ${table_name_prefix}${lhs}_index\n";
+
+
+            if ($prop_value ne "") {
+                #push @{$all_values{$lhs}}, $prop_value;
+
+                # Besides the rhs, we want the official names XXX
+                #push @{$all_values{$alias}}, prop_value_aliases($lhs, $prop_value);
+            }
         }
     }
 
@@ -2449,6 +2476,7 @@ foreach my $property (sort
     # processing.  But we haven't dealt with it yet.  If we already have a
     # property with the identical characteristics, this becomes just a
     # synonym for it.
+
     if (exists $enums{$tag}) {
         push @this_entries, $property;
     }
@@ -2487,6 +2515,7 @@ foreach my $property (sort
 
     # Go through the entries that evaluate to this.
     @this_entries = uniques @this_entries;
+    #print STDERR __LINE__, Dumper \@this_entries if $prop_value ne "";
     foreach my $define (@this_entries) {
 
         # There is a rule for the parser for each.
@@ -2502,6 +2531,7 @@ foreach my $property (sort
         }
     }
 }
+#print STDERR Dumper \%all_values;
 
 @bin_props = sort {  exists $keep_together{lc $b} <=> exists $keep_together{lc $a}
                    or $a cmp $b
@@ -2693,7 +2723,9 @@ foreach my $prop (@props) {
                     if (ref $invmap[0]) {
                         $bucket = join "\cK", map { a2n($_) }  @{$invmap[0]};
                     }
-                    elsif ($maps_to_code_point && $invmap[0] =~ $numeric_re) {
+                    elsif (   $maps_to_code_point
+                           && $invmap[0] =~ $integer_or_float_re)
+                    {
 
                         # Do convert to native for maps to single code points.
                         # There are some properties that have a few outlier
@@ -2716,7 +2748,7 @@ foreach my $prop (@props) {
 
                                # Skip any non-numeric maps: these are outliers
                                # that aren't code points.
-                            && $base_map =~ $numeric_re
+                            && $base_map =~ $integer_or_float_re
 
                                #  'ne' because the default can be a string
                             && $base_map ne $map_default)
@@ -2804,8 +2836,8 @@ foreach my $prop (@props) {
                     for my $i (0 .. @new_invlist - 1) {
                         next if $i > 0
                                 && $new_invlist[$i-1] + 1 == $new_invlist[$i]
-                                && $xlated{$new_invlist[$i-1]} =~ $numeric_re
-                                && $xlated{$new_invlist[$i]} =~ $numeric_re
+                                && $xlated{$new_invlist[$i-1]} =~ $integer_or_float_re
+                                && $xlated{$new_invlist[$i]} =~ $integer_or_float_re
                                 && $xlated{$new_invlist[$i-1]} + 1 == $xlated{$new_invlist[$i]};
                         push @temp, $new_invlist[$i];
                     }
@@ -2945,7 +2977,7 @@ if (scalar keys %deprecated_tags) {
     }
 }
 
-print $out_fh "\ntypedef enum {\n\tPERL_BIN_PLACEHOLDER = 0,\n\t";
+print $out_fh "\ntypedef enum {\n\tPERL_BIN_PLACEHOLDER = 0,  /* So no real value is zero */\n\t";
 print $out_fh join ",\n\t", @enums;
 print $out_fh "\n";
 print $out_fh "} binary_invlist_enum;\n";
@@ -2959,6 +2991,9 @@ print $out_fh "\n";
 
 output_table_trailer();
 
+@prop_names_synonyms = sort(uniques(@prop_names_synonyms));
+print $out_fh join "", @prop_names_synonyms;
+
 print $out_fh join "\n", "\n",
                          #'#    ifdef DOINIT',
                          #"\n",
@@ -2967,6 +3002,77 @@ print $out_fh join "\n", "\n",
                          #"\n",
                          #"#    endif  /* DOINIT */",
                          "\n";
+
+switch_pound_if ('Valid property_values', 'PERL_IN_REGCOMP_C');
+
+my %joined_values;
+my @values_tables = "NULL /* Placeholder so zero index is an error */";
+my @values_indices;
+
+
+my %all_values;
+for my $property (sort { prop_name_for_cmp($a) cmp prop_name_for_cmp($b) } uniques @equals_properties) {
+    my ($short_name) = prop_aliases($property);
+    $short_name = lc $short_name;
+    $short_name =~ s/[ _-]//g;
+
+    foreach my $value (prop_values($short_name)) {
+        print STDERR __LINE__, ": $value\n" if $short_name eq 'nv';
+        foreach my $alias (prop_value_aliases($short_name, $value)) {
+        print STDERR __LINE__, ": $alias\n" if $short_name eq 'nv';
+            push @{$all_values{$short_name}}, $alias;
+            $alias = lc $alias;
+            $alias =~ s/[ _-]//g unless $alias =~ $numeric_re;   # XXX should we accept grandfathered L_?
+            push @{$all_values{$short_name}}, $alias;
+        }
+    }
+}
+
+foreach my $block (prop_values('block')) {
+    push @{$all_values{'blk'}}, charblock((prop_invlist("block=$block"))[0]);
+}
+
+
+        
+
+PROPERTY:
+for my $property (sort { prop_name_for_cmp($a) cmp prop_name_for_cmp($b) or $a cmp $b } keys %all_values)
+{
+    @{$all_values{$property}} = uniques(@{$all_values{$property}});
+
+    my $joined = "\t\"";
+    $joined .= join "\",\n\t\"", sort { (   $a =~ $numeric_re
+                                         && $b =~ $numeric_re)
+                                        ? eval $a <=> eval $b
+                                        : prop_name_for_cmp($a) cmp prop_name_for_cmp($b)
+                                          or $a cmp $b
+                                      } @{$all_values{$property}};
+    $joined .= "\",\n\tNULL\n";
+
+    my $table_name = $table_name_prefix . $property . "_values";
+    my $index_name = "${table_name}_index";
+    $keywords{"$property="} = $index_name;
+
+    if (exists $joined_values{$joined}) {
+        push @values_indices, "#define $index_name  $joined_values{$joined}\n";
+        next PROPERTY;
+    }
+
+    push @values_indices, "#define $index_name  " . scalar @values_tables . "\n";
+    $joined_values{$joined} = $index_name;
+    push @values_tables, $table_name;
+
+    output_table_header($out_fh, "char *", $table_name);
+    print $out_fh $joined;
+    output_table_trailer();
+}
+
+print $out_fh "\n\n", join "", @values_indices;
+
+output_table_header($out_fh, "char * const *", "${table_name_prefix}prop_value_ptrs");
+print $out_fh join ",\n", @values_tables;
+print $out_fh "\n";
+output_table_trailer();
 
 switch_pound_if('Boundary_pair_tables', 'PERL_IN_REGEXEC_C');
 
@@ -3032,6 +3138,8 @@ print $keywords_fh <<"EOF";
 #define PL_E_FORMAT_PRECISION $utf8::e_precision
 
 EOF
+
+print STDERR Dumper \%keywords;
 
 my ($second_level, $seed1, $length_all_keys, $smart_blob, $rows) = MinimalPerfectHash::make_mph_from_hash(\%keywords);
 print $keywords_fh MinimalPerfectHash::make_algo($second_level, $seed1, $length_all_keys, $smart_blob, $rows, undef, undef, undef, 'match_uniprop' );

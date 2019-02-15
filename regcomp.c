@@ -1,4 +1,8 @@
 /*    regcomp.c
+ *    asr
+ *    exclude 1e from nv get full names in it
+ *
+ *    XXX check that the UTF8SKIPs are safe in this file
  */
 
 /*
@@ -15,6 +19,9 @@
  * it's built with -DPERL_EXT_RE_BUILD -DPERL_EXT_RE_DEBUG -DPERL_EXT.
  * This causes the main functions to be compiled under new names and with
  * debugging support added, which makes "use re 'debug'" work.
+ * The implications are that there are potential name
+ * conflicts between objects that are externally visible, such as the
+ * functions, in the two files that would manifest themselves at load time.
  */
 
 /* NOTE: this is derived from Henry Spencer's regexp code, and should not
@@ -13767,7 +13774,6 @@ S_regatom(pTHX_ RExC_state_t *pRExC_state, I32 *flagp, U32 depth)
                    || UTF8_IS_INVARIANT(UCHARAT(RExC_parse))
                    || UTF8_IS_START(UCHARAT(RExC_parse)));
 
-
             /* Here, we have a literal character.  Find the maximal string of
              * them in the input that we can fit into a single EXACTish node.
              * We quit at the first non-literal or when the node gets full, or
@@ -15742,7 +15748,7 @@ redo_curchar:
 
             case '\\':
                 /* regclass() can only return RESTART_PARSE and NEED_UTF8 if
-                 * multi-char folds are allowed.  */
+                 * XXX multi-char folds are allowed.  */
                 if (!regclass(pRExC_state, flagp, depth+1,
                               TRUE, /* means parse just the next thing */
                               FALSE, /* don't allow multi-char folds */
@@ -16914,6 +16920,7 @@ S_regclass(pTHX_ RExC_state_t *pRExC_state, I32 *flagp, U32 depth,
                     }
 
                     if (! is_invlist(prop_definition)) {
+                        /* XXX what if NULL or empty */
 
                         /* Here, the definition isn't known, so we have gotten
                          * returned a string that will be evaluated if and when
@@ -16955,6 +16962,7 @@ S_regclass(pTHX_ RExC_state_t *pRExC_state, I32 *flagp, U32 depth,
 
                         if (! user_defined &&
                             /* We warn on matching an above-Unicode code point
+                         * XXX should this be deferred until all things are calculated, as another \p{} could match it.
                              * if the match would return true, except don't
                              * warn for \p{All}, which has exactly one element
                              * = 0 */
@@ -18178,8 +18186,13 @@ S_regclass(pTHX_ RExC_state_t *pRExC_state, I32 *flagp, U32 depth,
              * the only element in the character class (perluniprops.pod notes
              * such properties). */
             if (partial_cp_count == 0) {
-                assert (! invert);
-                ret = reganode(pRExC_state, OPFAIL, 0);
+                if (invert) {
+                    ret = reg_node(pRExC_state, SANY);
+                }
+                else {
+                    ret = reganode(pRExC_state, OPFAIL, 0);
+                }
+
                 goto not_anyof;
             }
 
@@ -22307,6 +22320,84 @@ Perl_parse_uniprop_string(pTHX_
             }
         }
 
+        /* Most punctuation after the equals indicates a subpattern, like
+         * \p{foo=/bar/} */
+        if (   isPUNCT_A(name[i])
+            && name[i] != '-'
+            && name[i] != '+'
+            && name[i] != '_'
+            && name[i] != '{')
+        {
+            /* Find the property */
+            table_index = match_uniprop((U8 *) lookup_name, j);
+            if (table_index) {
+                const char * const * prop_values = UNI_prop_value_ptrs[table_index];
+                SV * subpattern;
+                Size_t subpattern_len;
+                REGEXP * subpattern_re;
+                char open = name[i];
+                char close;
+                const char * pos_in_brackets;
+                bool escaped = 0;
+
+                if (open == '\\') {
+                    open = name[i++];
+                    escaped = 1;
+                }
+
+                /* This data structure is constructed so that the matching
+                 * closing bracket is 3 past the opening.  The second set of
+                 * closing is so that if the opening is something like ']', the
+                 * closing will be that as well */
+                pos_in_brackets = strchr("([<)]>)]>", open);
+                close = (pos_in_brackets) ? pos_in_brackets[3] : open;
+
+                if (   name[name_len-1] != close
+                    || (escaped && name[name_len-2] != '\\'))
+                {
+                    sv_catpvs(msg, "BAD syntax");
+                    goto append_name_to_msg;
+                }
+
+                subpattern_len = name_len - i - escaped;
+                subpattern = Perl_newSVpvf(aTHX_ "(?iaa:%.*s)",
+                                              (unsigned) subpattern_len,
+                                              name + i);
+                subpattern_re = re_compile(subpattern, 0);
+
+                /* For each legal property value, see if the supplied pattern
+                 * matches it. */
+                while (*prop_values) {
+                    const char * const entry = *prop_values;
+                    const Size_t len = strlen(entry);
+                    SV* entry_sv = newSVpvn(entry, len);
+
+                    if (pregexec(subpattern_re,
+                                 (char *) entry,
+                                 (char *) entry + len,
+                                 (char *) entry, 0,
+                                 entry_sv,
+                                 0))
+                    {
+                        Size_t total_len = j + len;
+                        SV * sub_invlist = NULL;
+                        char * this_string;
+
+                        Newxz(this_string, total_len + 1, char);
+                        Copy(lookup_name, this_string, j, char);
+                        my_strlcat(this_string, entry, total_len + 1);
+                        sub_invlist = parse_uniprop_string(this_string, total_len, is_utf8, to_fold, runtime, user_defined_ptr, msg, level + 1);
+                        _invlist_union(prop_definition, sub_invlist, &prop_definition);
+                    }
+
+                    prop_values++;
+                }
+
+                return prop_definition;
+            }
+        }
+
+
         /* Certain properties whose values are numeric need special handling.
          * They may optionally be prefixed by 'is'.  Ignore that prefix for the
          * purposes of checking if this is one of those properties */
@@ -22383,6 +22474,7 @@ Perl_parse_uniprop_string(pTHX_
 
             /* Skip leading zeros including single underscores separating the
              * zeros, or between the final leading zero and the first other
+             * XXX this seems wrongly implemented.  We shouldn't break at the first thing.
              * digit */
             for (; i < name_len - 1; i++) {
                 if (    name[i] != '0'
@@ -22457,7 +22549,7 @@ Perl_parse_uniprop_string(pTHX_
 
         /* A slash in the 'numeric value' property indicates that what follows
          * is a denominator.  It can have a leading '+' and '0's that should be
-         * skipped.  But we have never allowed a negative denominator, so treat
+         * skipped.  But we have never allowed a negative denominator XXX, so treat
          * a minus like every other character.  (No need to rule out a second
          * '/', as that won't match anything anyway */
         if (is_nv_type) {
@@ -22504,6 +22596,7 @@ Perl_parse_uniprop_string(pTHX_
         could_be_user_defined = FALSE;
     }
 
+                        /* XXX blead -Dr -I../lib -le 'qr/\p{Is_Other_Alphabetic=F}/' should fail at compile time because of the equals sign */
     if (could_be_user_defined) {
         CV* user_sub;
 
@@ -22985,6 +23078,7 @@ Perl_parse_uniprop_string(pTHX_
     if (table_index > MAX_UNI_KEYWORD_INDEX) {
         Size_t warning_offset = table_index / MAX_UNI_KEYWORD_INDEX;
         table_index %= MAX_UNI_KEYWORD_INDEX;
+        /*(DEPRECATED, REGEXP),*/
         Perl_ck_warner_d(aTHX_ packWARN(WARN_DEPRECATED),
                 "Use of '%.*s' in \\p{} or \\P{} is deprecated because: %s",
                 (int) name_len, name, deprecated_property_msgs[warning_offset]);

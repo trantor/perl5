@@ -1,5 +1,5 @@
 /*    utf8.c
- *
+ * XXX changed APItest/numeric.xs and makefile didn't catch it and recompile
  *    Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008
  *    by Larry Wall and others
  *
@@ -3841,13 +3841,16 @@ S_turkic_uc(pTHX_ const U8 * const p, const U8 * const e,
  * function can start with the common start macro, then finish with its special
  * handling; while the other three cases can just use the common end macro.
  *
- * The algorithm is to use the proper (passed in) macro or function to change
- * the case for code points that are below 256.  The macro is used if using
- * locale rules for the case change; the function if not.  If the code point is
- * above 255, it is computed from the input UTF-8, and another macro is called
- * to do the conversion.  If necessary, the output is converted to UTF-8.  If
- * using a locale, we have to check that the change did not cross the 255/256
- * boundary, see check_locale_boundary_crossing() for further details.
+ * The algorithm is to use the proper (passed in) LC_L1 macro or L1 function to
+ * change the case for code points that are below 256.  The LC_L1 macro is used
+ * if using locale rules for the case change; the L1 function if not.  If the
+ * code point is above 255, it is computed from the input UTF-8, and another
+ * macro
+ * XXX
+ * is called to do the conversion.  If necessary, the output is converted to
+ * UTF-8.  If using a locale, we have to check that the change did not cross
+ * the 255/256 boundary, see check_locale_boundary_crossing() for further
+ * details.
  *
  * The macros are split with the correct case change for the below-256 case
  * stored into 'result', and in the middle of an else clause for the above-255

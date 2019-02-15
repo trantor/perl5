@@ -128,7 +128,7 @@
 :	doesn't call the function specified by this entry.  This is typically
 :	done for a function that effectively just wraps another one, and where
 :	the macro form calls the underlying function directly.  For these, also
-:	specify the 'm' flag.  Legacy-only functions should instead use 'b'.
+:	XXX? specify the 'm' flag.  Legacy-only functions should instead use 'b'.
 :
 :         embed.h: suppress "#define foo Perl_foo"
 :
@@ -1740,7 +1740,7 @@ EMpX	|SV*	|invlist_clone	|NN SV* const invlist|NULLOK SV* newlist
 #endif
 #if defined(PERL_IN_REGCOMP_C) || defined(PERL_IN_REGEXEC_C) || defined(PERL_IN_TOKE_C) || defined(PERL_IN_UTF8_C) || defined(PERL_IN_PP_C)
 EiMRn	|UV*	|invlist_array	|NN SV* const invlist
-EiMRn	|bool	|is_invlist	|NN SV* const invlist
+EiMRn	|bool	|is_invlist	|NULLOK SV* const invlist
 EiMRn	|bool*	|get_invlist_offset_addr|NN SV* invlist
 EiMRn	|UV	|_invlist_len	|NN SV* const invlist
 EMiRn	|bool	|_invlist_contains_cp|NN SV* const invlist|const UV cp
@@ -1900,6 +1900,7 @@ ApM	|U8*	|uvoffuni_to_utf8_flags_msgs|NN U8 *d|UV uv|const UV flags|NULLOK HV** 
 Ap	|U8*	|uvuni_to_utf8_flags	|NN U8 *d|UV uv|UV flags
 Apd	|char*	|pv_uni_display	|NN SV *dsv|NN const U8 *spv|STRLEN len|STRLEN pvlim|UV flags
 ApdR	|char*	|sv_uni_display	|NN SV *dsv|NN SV *ssv|STRLEN pvlim|UV flags
+: XXX maybe some functions no longer need interp var
 EXpR	|Size_t	|_inverse_folds	|const UV cp				    \
 				|NN unsigned int * first_folds_to	    \
 				|NN const unsigned int ** remaining_folds_to

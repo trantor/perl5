@@ -2382,6 +2382,8 @@ end
 	    "user-defined property: tainted case");
 
 }
+#         well, the main issue I can see is if you want to define properties that tainted regexps can use
+#<TonyC> though maybe you can do that now if you use a property in a non-tainted regexp to define it
 
 {
 

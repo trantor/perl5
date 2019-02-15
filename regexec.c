@@ -1,4 +1,5 @@
 /*    regexec.c
+ *    XXX check that the UTF8SKIP s are safe in this file.  I did some but got bored
  */
 
 /*
@@ -1728,7 +1729,7 @@ STMT_START {                                                                    
         } else {                                                                    \
             uvc = _toFOLD_utf8_flags( (const U8*) uc, uc_end, foldbuf, &foldlen,    \
                                                                             flags); \
-            len = UTF8SKIP(uc);                                                     \
+            len = MIN(UTF8SKIP(uc), uc_end - uc);                                   \
             skiplen = UVCHR_SKIP( uvc );                                            \
             foldlen -= skiplen;                                                     \
             uscan = foldbuf + skiplen;                                              \
@@ -1758,7 +1759,7 @@ STMT_START {                                                                    
     case trie_utf8l:                                                                \
         _CHECK_AND_WARN_PROBLEMATIC_LOCALE;                                         \
         if (utf8_target && UTF8_IS_ABOVE_LATIN1(*uc)) {                             \
-            _CHECK_AND_OUTPUT_WIDE_LOCALE_UTF8_MSG(uc, uc + UTF8SKIP(uc));          \
+            _CHECK_AND_OUTPUT_WIDE_LOCALE_UTF8_MSG(uc, uc_end);                     \
         }                                                                           \
         /* FALLTHROUGH */                                                           \
     case trie_utf8:                                                                 \
@@ -3780,6 +3781,7 @@ Perl_regexec_flags(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
 		    goto got_it;
 		if (s >= strend)
 		    break;
+                /* XXX Does this go past end of buffer */
 		s += UTF8SKIP(s);
 	    };
 	}
@@ -6124,6 +6126,7 @@ S_regmatch(pTHX_ regmatch_info *reginfo, char *startpos, regnode *prog)
 		else {
 		    if (utf8_target)
 			while (chars--)
+                            /* XXX Does this go past end of buffer */
 			    uc += UTF8SKIP(uc);
 		    else
 			uc += chars;
@@ -8200,7 +8203,7 @@ NULL
 		);
 	    if (! NEXTCHR_IS_EOS && ST.c1 != CHRTEST_VOID) {
                 if (! UTF8_IS_INVARIANT(nextchr) && utf8_target) {
-                    if (memNE(locinput, ST.c1_utf8, UTF8SKIP(locinput))
+                    if (   memNE(locinput, ST.c1_utf8, UTF8SKIP(locinput))
                         && memNE(locinput, ST.c2_utf8, UTF8SKIP(locinput)))
                     {
                         /* simulate B failing */
@@ -9292,7 +9295,7 @@ S_regrepeat(pTHX_ regexp *prog, char **startposp, const regnode *p,
                 else {
                     while (scan < loceol
                            && hardcount < max
-                           && (memEQ(scan, c1_utf8, UTF8SKIP(scan))
+                           && (   memEQ(scan, c1_utf8, UTF8SKIP(scan))
                                || memEQ(scan, c2_utf8, UTF8SKIP(scan))))
                     {
                         scan += UTF8SKIP(scan);

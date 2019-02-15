@@ -9766,6 +9766,7 @@ Perl_newSVsv(pTHX_ SV *const old)
     }
     /* Do this here, otherwise we leak the new SV if this croaks. */
     SvGETMAGIC(old);
+
     new_SV(sv);
     /* SV_NOSTEAL prevents TEMP buffers being, well, stolen, and saves games
        with SvTEMP_off and SvTEMP_on round a call to sv_setsv.  */
@@ -10869,7 +10870,8 @@ Perl_sv_catpvf_mg_nocontext(SV *const sv, const char *const pat, ...)
 /*
 =for apidoc sv_catpvf
 
-Processes its arguments like C<sv_catpvfn>, and appends the formatted
+Processes its arguments like C<sv_catpvfn>, XXX this fcn doesn't exist, but there is a sv_vcatpvfn
+and appends the formatted
 output to an SV.  As with C<sv_catpvfn> called with a non-null C-style
 variable argument list, argument reordering is not supported.
 If the appended data contains "wide" characters
@@ -12619,6 +12621,8 @@ Perl_sv_vcatpvfn_flags(pTHX_ SV *const sv, const char *const pat, const STRLEN p
                         case 't':  iv = va_arg(*args, ptrdiff_t);  break;
 #endif
                         default:   iv = va_arg(*args, int);        break;
+                                   /* On windows, warning C4244: '=' : conversion from 'PERL_INTMAX_T' to 'I
+     V', possible loss of data */
                         case 'j':  iv = va_arg(*args, PERL_INTMAX_T); break;
                         case 'q':
 #if IVSIZE >= 8

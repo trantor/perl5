@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w
+$|=1;
 
 package main;
 
@@ -868,6 +869,7 @@ package My::Pod::Checker {      # Extend Pod::Checker
         my @lines = split /^/, $running_simple_text{$addr};
         for my $i (0..$#lines) {
             if ($lines[$i] =~ m/\N{REPLACEMENT CHARACTER}/) {
+                print STDERR __LINE__, ": ", $filename{$addr}, "\n";
                 $self->poderror({ -line => $start_line{$addr} + $i,
                     -msg => $replacement_character,
                     parameter => "possibly invalid ". $self->encoding . " input at character " . pos $lines[$i],
