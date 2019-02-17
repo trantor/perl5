@@ -589,12 +589,14 @@ S_emulate_setlocale(const int category,
         /* If this assert fails, adjust the size of curlocales in intrpvar.h */
         STATIC_ASSERT_STMT(C_ARRAY_LENGTH(PL_curlocales) > LC_ALL_INDEX);
 
-#    if defined(_NL_LOCALE_NAME) && defined(DEBUGGING)
+#    if   defined(_NL_LOCALE_NAME)                      \
+     &&   defined(DEBUGGING)                            \
+     && ! defined(SETLOCALE_ACCEPTS_ANY_LOCALE_NAME)
 
         {
             /* Internal glibc for querylocale(), but doesn't handle
              * empty-string ("") locale properly; who knows what other
-             * glitches.  Check it for now, under debug. */
+             * glitches.  Check for it now, under debug. */
 
             char * temp_name = nl_langinfo_l(_NL_LOCALE_NAME(category),
                                              uselocale((locale_t) 0));
